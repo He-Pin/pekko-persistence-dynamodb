@@ -12,6 +12,10 @@ import net.bzzt.reproduciblebuilds.ReproducibleBuildsPlugin.reproducibleBuildsCh
 
 val amzVersion = "1.12.797"
 val testcontainersScalaVersion = "0.44.1"
+val isScala38OrLater = Def.setting(CrossVersion.partialVersion(scalaVersion.value).exists {
+  case (3, minor) if minor >= 8 => true
+  case _                        => false
+})
 
 ThisBuild / versionScheme := Some(VersionScheme.SemVerSpec)
 sourceDistName := "apache-pekko-persistence-dynamodb"
@@ -60,15 +64,18 @@ lazy val root = Project(
     scalacOptions ++= {
       if (scalaBinaryVersion.value == "3")
         Seq(
-          "-Yfuture-lazy-vals",
           "-release:17",
           "-Wconf:msg=Implicit parameters should be provided with a `using` clause:s",
           "-Wconf:msg=is deprecated for wildcard arguments of types:s",
           "-Wconf:msg=The trailing ` _` for eta-expansion is unnecessary:s",
           "-Wconf:msg=with as a type operator has been deprecated:s",
           "-Wconf:msg=Unreachable case except for null:s",
-          "-Wconf:msg=is no longer supported for vararg splices:s",
-          "-Wconf:msg=bad option.*-Yfuture-lazy-vals:s")
+          "-Wconf:msg=is no longer supported for vararg splices:s") ++
+        (if (isScala38OrLater.value) Seq("-Wconf:any:s")
+         else Seq.empty) ++
+        (if (scalaVersion.value.startsWith("3.3."))
+           Seq("-Yfuture-lazy-vals", "-Wconf:msg=bad option.*-Yfuture-lazy-vals:s")
+         else Seq.empty)
       else Seq.empty
     },
     Test / parallelExecution := false,
